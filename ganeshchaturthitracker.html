@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ganesh Chaturthi Chanda Tracker</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #fdf6e3; color: #333; }
+    h1 { text-align: center; color: #d35400; }
+    .section { margin: 20px 0; padding: 15px; background: #fff3e0; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    label { display: block; margin: 8px 0 4px; }
+    input { padding: 8px; width: 90%; border: 1px solid #ccc; border-radius: 5px; }
+    button { margin-top: 10px; padding: 8px 12px; background: #e67e22; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #d35400; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    th { background: #f39c12; color: white; }
+    .summary { margin-top: 20px; padding: 15px; background: #dff9fb; border-radius: 10px; font-size: 18px; }
+    .admin-panel { margin: 20px 0; padding: 10px; background: #e8e8e8; border-radius: 8px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h1>🙏 Ganesh Chaturthi Chanda Tracker 🙏</h1>
+
+  <!-- Admin Panel -->
+  <div class="admin-panel">
+    <label>Enter Admin Password to Unlock Edit/Delete:</label>
+    <input type="password" id="adminPass">
+    <button onclick="checkAdmin()">Unlock</button>
+    <p id="adminStatus" style="color:green;"></p>
+  </div>
+
+  <!-- Donation Section -->
+  <div class="section">
+    <h2>💰 Add Donation</h2>
+    <label>Donor Name:</label>
+    <input type="text" id="donorName">
+    <label>Amount:</label>
+    <input type="number" id="donationAmount">
+    <button onclick="addDonation()">Add Donation</button>
+
+    <table id="donationTable">
+      <tr><th>Donor</th><th>Amount</th><th class="adminOnly hidden">Actions</th></tr>
+    </table>
+  </div>
+
+  <!-- Expense Section -->
+  <div class="section">
+    <h2>🛒 Add Expense</h2>
+    <label>Item/Use:</label>
+    <input type="text" id="expenseItem">
+    <label>Amount:</label>
+    <input type="number" id="expenseAmount">
+    <button onclick="addExpense()">Add Expense</button>
+
+    <table id="expenseTable">
+      <tr><th>Item</th><th>Amount</th><th class="adminOnly hidden">Actions</th></tr>
+    </table>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary">
+    <p><b>Total Donations:</b> ₹<span id="totalDonations">0</span></p>
+    <p><b>Total Expenses:</b> ₹<span id="totalExpenses">0</span></p>
+    <p><b>Balance Left:</b> ₹<span id="balance">0</span></p>
+  </div>
+
+  <script>
+    let donations = JSON.parse(localStorage.getItem("donations")) || [];
+    let expenses = JSON.parse(localStorage.getItem("expenses")) || [];
+    let isAdmin = false;
+    const adminPassword = "ganesh123";
+
+    function saveData() {
+      localStorage.setItem("donations", JSON.stringify(donations));
+      localStorage.setItem("expenses", JSON.stringify(expenses));
+    }
+
+    function renderTables() {
+      // Donations
+      let dTable = document.getElementById("donationTable");
+      dTable.innerHTML = "<tr><th>Donor</th><th>Amount</th><th class='adminOnly " + (isAdmin ? "" : "hidden") + "'>Actions</th></tr>";
+      let totalDon = 0;
+      donations.forEach((d, i) => {
+        let row = dTable.insertRow();
+        row.insertCell(0).innerText = d.name;
+        row.insertCell(1).innerText = d.amount;
+        totalDon += d.amount;
+        if(isAdmin){
+          let actions = row.insertCell(2);
+          actions.innerHTML = `<button onclick="editDonation(${i})">Edit</button>
+                               <button onclick="deleteDonation(${i})">Delete</button>`;
+        }
+      });
+
+      // Expenses
+      let eTable = document.getElementById("expenseTable");
+      eTable.innerHTML = "<tr><th>Item</th><th>Amount</th><th class='adminOnly " + (isAdmin ? "" : "hidden") + "'>Actions</th></tr>";
+      let totalExp = 0;
+      expenses.forEach((e, i) => {
+        let row = eTable.insertRow();
+        row.insertCell(0).innerText = e.item;
+        row.insertCell(1).innerText = e.amount;
+        totalExp += e.amount;
+        if(isAdmin){
+          let actions = row.insertCell(2);
+          actions.innerHTML = `<button onclick="editExpense(${i})">Edit</button>
+                               <button onclick="deleteExpense(${i})">Delete</button>`;
+        }
+      });
+
+      document.getElementById("totalDonations").innerText = totalDon;
+      document.getElementById("totalExpenses").innerText = totalExp;
+      document.getElementById("balance").innerText = totalDon - totalExp;
+    }
+
+    function addDonation() {
+      let name = document.getElementById("donorName").value;
+      let amount = parseInt(document.getElementById("donationAmount").value);
+      if(name && amount > 0){
+        donations.push({name, amount});
+        saveData();
+        renderTables();
+        document.getElementById("donorName").value = "";
+        document.getElementById("donationAmount").value = "";
+      }
+    }
+
+    function addExpense() {
+      let item = document.getElementById("expenseItem").value;
+      let amount = parseInt(document.getElementById("expenseAmount").value);
+      if(item && amount > 0){
+        expenses.push({item, amount});
+        saveData();
+        renderTables();
+        document.getElementById("expenseItem").value = "";
+        document.getElementById("expenseAmount").value = "";
+      }
+    }
+
+    // Admin login
+    function checkAdmin() {
+      let pass = document.getElementById("adminPass").value;
+      if(pass === adminPassword){
+        isAdmin = true;
+        document.getElementById("adminStatus").innerText = "✅ Admin Mode Enabled";
+      } else {
+        isAdmin = false;
+        document.getElementById("adminStatus").innerText = "❌ Wrong Password";
+      }
+      renderTables();
+    }
+
+    // Edit/Delete
+    function editDonation(i){
+      let newName = prompt("Edit Donor Name:", donations[i].name);
+      let newAmount = parseInt(prompt("Edit Amount:", donations[i].amount));
+      if(newName && newAmount>0){
+        donations[i] = {name:newName, amount:newAmount};
+        saveData(); renderTables();
+      }
+    }
+    function deleteDonation(i){
+      if(confirm("Delete this donation?")){
+        donations.splice(i,1);
+        saveData(); renderTables();
+      }
+    }
+    function editExpense(i){
+      let newItem = prompt("Edit Item:", expenses[i].item);
+      let newAmount = parseInt(prompt("Edit Amount:", expenses[i].amount));
+      if(newItem && newAmount>0){
+        expenses[i] = {item:newItem, amount:newAmount};
+        saveData(); renderTables();
+      }
+    }
+    function deleteExpense(i){
+      if(confirm("Delete this expense?")){
+        expenses.splice(i,1);
+        saveData(); renderTables();
+      }
+    }
+
+    // Initial load
+    renderTables();
+  </script>
+</body>
+</html>
